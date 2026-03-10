@@ -1,0 +1,14 @@
+local TextChatService = game:GetService("TextChatService")
+
+local messages = {
+    "お、おうw😅",
+    "どわーw😅",
+    "くかなんよw",
+    "あぁ、そういうノリ…w😅",
+    "かっけー(笑)",
+    "ガチイク！"
+}
+
+local msg = messages[math.random(1, #messages)]
+
+TextChatService.TextChannels.RBXGeneral:SendAsync(msg)
