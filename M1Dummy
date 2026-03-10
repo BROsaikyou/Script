@@ -1,0 +1,153 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local holding = false
+local guiToggle = false
+local dummy = nil
+local distance = 6
+local enemiesFolder
+
+-- Enemiesフォルダ準備（サーバー変更対応）
+local function setupEnemiesFolder()
+	enemiesFolder = workspace:FindFirstChild("Enemies")
+	if not enemiesFolder then
+		enemiesFolder = Instance.new("Folder")
+		enemiesFolder.Name = "Enemies"
+		enemiesFolder.Parent = workspace
+	end
+end
+
+setupEnemiesFolder()
+
+player.CharacterAdded:Connect(function()
+	setupEnemiesFolder()
+end)
+
+-- R15ダミー作成
+local function createDummy()
+	if dummy then return end
+	
+	dummy = Instance.new("Model")
+	dummy.Name = "M1 Dummy"
+	dummy.Parent = enemiesFolder
+	
+	-- Humanoid
+	local humanoid = Instance.new("Humanoid")
+	humanoid.RigType = Enum.HumanoidRigType.R15
+	humanoid.Health = math.huge
+	humanoid.MaxHealth = math.huge
+	humanoid.Parent = dummy
+	
+	local function part(name, size)
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Size = size
+		p.Anchored = true
+		p.CanCollide = false -- 当たり判定を無効化
+		p.CanTouch = false   -- タッチイベントも無効化
+		p.CanQuery = false   -- レイキャスト等からも除外
+		p.Transparency = 1   -- パーツを完全に透明にする
+		p.TopSurface = Enum.SurfaceType.Smooth
+		p.BottomSurface = Enum.SurfaceType.Smooth
+		p.Parent = dummy
+		return p
+	end
+	
+	local hrp = part("HumanoidRootPart", Vector3.new(2,2,1))
+	part("Head", Vector3.new(2,1,1))
+	part("UpperTorso", Vector3.new(2,2,1))
+	part("LowerTorso", Vector3.new(2,2,1))
+	part("LeftUpperArm", Vector3.new(1,2,1))
+	part("LeftLowerArm", Vector3.new(1,2,1))
+	part("LeftHand", Vector3.new(1,1,1))
+	part("RightUpperArm", Vector3.new(1,2,1))
+	part("RightLowerArm", Vector3.new(1,2,1))
+	part("RightHand", Vector3.new(1,1,1))
+	part("LeftUpperLeg", Vector3.new(1,2,1))
+	part("LeftLowerLeg", Vector3.new(1,2,1))
+	part("LeftFoot", Vector3.new(1,1,1))
+	part("RightUpperLeg", Vector3.new(1,2,1))
+	part("RightLowerLeg", Vector3.new(1,2,1))
+	part("RightFoot", Vector3.new(1,1,1))
+	
+	dummy.PrimaryPart = hrp
+end
+
+local function removeDummy()
+	if dummy then
+		dummy:Destroy()
+		dummy = nil
+	end
+end
+
+-- GUIの作成
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "RightClickToggleGui"
+screenGui.Parent = player:WaitForChild("PlayerGui")
+screenGui.ResetOnSpawn = false
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Name = "ToggleButton"
+toggleButton.Size = UDim2.new(0, 150, 0, 50)
+toggleButton.Position = UDim2.new(0, 10, 0, 10)
+toggleButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+toggleButton.Text = "OFF"
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.TextSize = 18
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.Parent = screenGui
+
+-- 状態を更新する関数
+local function updateState()
+	if holding or guiToggle then
+		createDummy()
+	else
+		removeDummy()
+	end
+end
+
+-- GUIボタンのクリックイベント
+toggleButton.MouseButton1Click:Connect(function()
+	guiToggle = not guiToggle
+	if guiToggle then
+		toggleButton.Text = "ON"
+		toggleButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+	else
+		toggleButton.Text = "OFF"
+		toggleButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+	end
+	updateState()
+end)
+
+-- キーボード/マウス入力イベント
+UserInputService.InputBegan:Connect(function(input, gp)
+	if gp then return end
+	if input.UserInputType == Enum.UserInputType.MouseButton2 then
+		holding = true
+		updateState()
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton2 then
+		holding = false
+		updateState()
+	end
+end)
+
+-- 描画更新
+RunService.RenderStepped:Connect(function()
+	if not (holding or guiToggle) or not dummy then return end
+	
+	local char = player.Character
+	if not char then return end
+	
+	local realHRP = char:FindFirstChild("HumanoidRootPart")
+	if not realHRP then return end
+	
+	dummy:SetPrimaryPartCFrame(
+		realHRP.CFrame * CFrame.new(0,0,-distance)
+	)
+end)
