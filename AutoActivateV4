@@ -1,0 +1,116 @@
+-- ==================================================
+-- Blox Fruits: Race V4 & V3 GUI版
+-- ==================================================
+
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local V4Toggle = Instance.new("TextButton")
+local V3Toggle = Instance.new("TextButton")
+local UIListLayout = Instance.new("UIListLayout")
+
+-- GUIの親設定 (実行環境に合わせて変更)
+ScreenGui.Parent = game:GetService("CoreGui") -- エグゼキューター用
+-- ScreenGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui") -- 開発用
+
+-- --- [ レイアウト設定 ] ---
+MainFrame.Name = "RaceControlFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+MainFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
+MainFrame.Size = UDim2.new(0, 200, 0, 150)
+MainFrame.Active = true
+MainFrame.Draggable = true -- ドラッグ移動可能
+
+Title.Parent = MainFrame
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "Race Control"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+
+UIListLayout.Parent = MainFrame
+UIListLayout.Padding = UDim.new(0, 10)
+UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- --- [ スタイル関数 ] ---
+local function StyleButton(btn, text)
+    btn.Size = UDim2.new(0.9, 0, 0, 40)
+    btn.Text = text
+    btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50) -- 初期は赤（オフ）
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 14
+end
+
+StyleButton(V4Toggle, "Auto Race V4: OFF")
+V4Toggle.Parent = MainFrame
+StyleButton(V3Toggle, "Auto Race V3: OFF")
+V3Toggle.Parent = MainFrame
+
+-- --- [ ロジック部分 ] ---
+local LP = game:GetService("Players").LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RS = game:GetService("RunService")
+
+_G.AutoRaceV4_Force = false
+_G.AutoRaceV3_Ability = false
+local AbilityCooldown = 0
+local RaceAbilities = {"Last Resort", "Agility", "Water Body", "Heavenly Blood", "Heightened Senses", "Energy Core", "Primordial Reign"}
+
+local function HasAbility()
+    local char = LP.Character
+    if not char then return false end
+    for _, v in ipairs(RaceAbilities) do
+        if LP.Backpack:FindFirstChild(v) or char:FindFirstChild(v) then return true end
+    end
+    return false
+end
+
+-- --- [ ボタンクリックイベント ] ---
+V4Toggle.MouseButton1Click:Connect(function()
+    _G.AutoRaceV4_Force = not _G.AutoRaceV4_Force
+    V4Toggle.Text = "Auto Race V4: " .. (_G.AutoRaceV4_Force and "ON" or "OFF")
+    V4Toggle.BackgroundColor3 = _G.AutoRaceV4_Force and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+end)
+
+V3Toggle.MouseButton1Click:Connect(function()
+    _G.AutoRaceV3_Ability = not _G.AutoRaceV3_Ability
+    V3Toggle.Text = "Auto Race V3: " .. (_G.AutoRaceV3_Ability and "ON" or "OFF")
+    V3Toggle.BackgroundColor3 = _G.AutoRaceV3_Ability and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+end)
+
+-- --- [ ループ処理 ] ---
+RS.Heartbeat:Connect(function(dt)
+    local char = LP.Character
+    if not char then return end
+
+    pcall(function()
+        -- V4 強制変身
+        if _G.AutoRaceV4_Force then
+            local energy = char:FindFirstChild("RaceEnergy")
+            if energy and energy.Value >= 1 then
+                local rt = char:FindFirstChild("RaceTransformed")
+                if rt then rt.Value = false end
+                ReplicatedStorage.Remotes.CommE:FireServer("ActivateAbility")
+                
+                local t = LP.Backpack:FindFirstChild("Awakening") or char:FindFirstChild("Awakening")
+                if t and t:FindFirstChild("RemoteFunction") then 
+                    t.RemoteFunction:InvokeServer(true) 
+                end
+            end
+        end
+
+        -- V3 スキル連打
+        if _G.AutoRaceV3_Ability then
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 and HasAbility() then
+                AbilityCooldown = AbilityCooldown - dt
+                if AbilityCooldown <= 0 then
+                    ReplicatedStorage.Remotes.CommE:FireServer("ActivateAbility")
+                    AbilityCooldown = 0.2
+                end
+            end
+        end
+    end)
+end)
