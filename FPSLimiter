@@ -1,0 +1,117 @@
+--[[
+    タイトル: 自作GUI版 高機能FPSリミッター (Lagger常時表示・アイコン変更版)
+    説明: メインGUI表示中もLaggerボタンを表示可能にし、アイコンを分かりやすく変更。
+]]
+
+-- GUI要素の作成
+local ScreenGui = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local Slider = Instance.new("Frame")
+local Dragger = Instance.new("TextButton")
+local FpsLabel = Instance.new("TextLabel")
+local ToggleButton = Instance.new("TextButton")
+local MobileToggle = Instance.new("TextButton")
+local LaggerButton = Instance.new("TextButton")
+local MinimizeButton = Instance.new("TextButton")
+local ShowButton = Instance.new("TextButton")
+local LockButton = Instance.new("TextButton")
+
+local UserInputService = game:GetService("UserInputService")
+
+-- グローバル変数
+local isModeOn = true
+local isKDown = false
+local isLaggerBtnDown = false
+local sliderFps = 60
+local sliderDragging = false
+local laggerButtonDragging = false
+local isLaggerLocked = false
+local isLaggerVisible = false
+
+-- GUIの親とプロパティ設定
+ScreenGui.Parent = game.CoreGui; ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+Frame.Parent = ScreenGui; Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30); Frame.BorderColor3 = Color3.fromRGB(80, 80, 80); Frame.BorderSizePixel = 2; Frame.Position = UDim2.new(0.5, -150, 0.5, -75); Frame.Size = UDim2.new(0, 300, 0, 150); Frame.Active = true; Frame.Draggable = true
+Title.Parent = Frame; Title.BackgroundColor3 = Color3.fromRGB(45, 45, 45); Title.Size = UDim2.new(1, 0, 0, 30); Title.Font = Enum.Font.SourceSansBold; Title.Text = "FPS Limiter"; Title.TextColor3 = Color3.fromRGB(255, 255, 255); Title.TextSize = 18
+Slider.Parent = Frame; Slider.BackgroundColor3 = Color3.fromRGB(50, 50, 50); Slider.Position = UDim2.new(0.05, 0, 0.5, -5); Slider.Size = UDim2.new(0.9, 0, 0, 10)
+Dragger.Parent = Slider; Dragger.BackgroundColor3 = Color3.fromRGB(100, 100, 100); Dragger.Size = UDim2.new(0, 20, 0, 20); Dragger.ZIndex = 2
+FpsLabel.Parent = Frame; FpsLabel.BackgroundTransparency = 1; FpsLabel.Position = UDim2.new(0.25, 0, 0.7, 0); FpsLabel.Size = UDim2.new(0.4, 0, 0.3, 0); FpsLabel.Font = Enum.Font.SourceSansBold; FpsLabel.TextColor3 = Color3.fromRGB(255, 255, 255); FpsLabel.TextSize = 20; FpsLabel.TextXAlignment = Enum.TextXAlignment.Center
+ToggleButton.Parent = Frame; ToggleButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113); ToggleButton.BorderColor3 = Color3.fromRGB(22, 160, 133); ToggleButton.BorderSizePixel = 2; ToggleButton.Position = UDim2.new(0.05, 0, 0.7, 0); ToggleButton.Size = UDim2.new(0.2, 0, 0.25, 0); ToggleButton.Font = Enum.Font.SourceSansBold; ToggleButton.Text = "ON"; ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255); ToggleButton.TextSize = 18
+
+-- ★モバイルトグルボタンのアイコンを変更
+MobileToggle.Parent = Frame; MobileToggle.BackgroundColor3 = Color3.fromRGB(52, 152, 219); MobileToggle.BorderColor3 = Color3.fromRGB(41, 128, 185); MobileToggle.BorderSizePixel = 2; MobileToggle.Position = UDim2.new(0.65, 0, 0.7, 0); MobileToggle.Size = UDim2.new(0.15, 0, 0.25, 0); MobileToggle.Font = Enum.Font.SourceSansBold; MobileToggle.Text = "📱"; MobileToggle.TextColor3 = Color3.fromRGB(255, 255, 255); MobileToggle.TextSize = 22
+
+LockButton.Parent = Frame; LockButton.BackgroundColor3 = Color3.fromRGB(243, 156, 18); LockButton.BorderColor3 = Color3.fromRGB(211, 84, 0); LockButton.BorderSizePixel = 2; LockButton.Position = UDim2.new(0.82, 0, 0.7, 0); LockButton.Size = UDim2.new(0.13, 0, 0.25, 0); LockButton.Font = Enum.Font.SourceSansBold; LockButton.Text = "🔓"; LockButton.TextColor3 = Color3.fromRGB(255, 255, 255); LockButton.TextSize = 20
+LaggerButton.Parent = ScreenGui; LaggerButton.BackgroundColor3 = Color3.fromRGB(155, 89, 182); LaggerButton.BorderColor3 = Color3.fromRGB(142, 68, 173); LaggerButton.BorderSizePixel = 2; LaggerButton.Position = UDim2.new(0.5, 75, 0.5, 80); LaggerButton.Size = UDim2.new(0, 70, 0, 40); LaggerButton.Font = Enum.Font.SourceSansBold; LaggerButton.Text = "Lagger"; LaggerButton.TextColor3 = Color3.fromRGB(255, 255, 255); LaggerButton.TextSize = 18; LaggerButton.Visible = false; LaggerButton.Active = true -- Activeは常にtrueにしておく
+MinimizeButton.Parent = Title; MinimizeButton.BackgroundColor3 = Color3.fromRGB(231, 76, 60); MinimizeButton.BorderSizePixel = 0; MinimizeButton.Position = UDim2.new(1, -28, 0.5, -12); MinimizeButton.Size = UDim2.new(0, 24, 0, 24); MinimizeButton.Font = Enum.Font.SourceSansBold; MinimizeButton.Text = "-"; MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255); MinimizeButton.TextSize = 28
+ShowButton.Parent = ScreenGui; ShowButton.BackgroundColor3 = Color3.fromRGB(52, 73, 94); ShowButton.Position = UDim2.new(0, 10, 0, 10); ShowButton.Size = UDim2.new(0, 40, 0, 40); ShowButton.Font = Enum.Font.SourceSansBold; ShowButton.Text = "L"; ShowButton.TextColor3 = Color3.fromRGB(255, 255, 255); ShowButton.TextSize = 24; ShowButton.Visible = false
+
+-- FPS適用・更新ロジック
+local function applyFps(fps) if setfpscap then setfpscap(fps); FpsLabel.Text = "FPS: " .. tostring(math.floor(fps)) end end
+local function updateTargetFps() if (isModeOn and isKDown) or isLaggerBtnDown then applyFps(23) else applyFps(sliderFps) end end
+
+-- 最小化・再表示の処理
+MinimizeButton.MouseButton1Click:Connect(function() Frame.Visible = false; ShowButton.Visible = true end)
+ShowButton.MouseButton1Click:Connect(function() Frame.Visible = true; ShowButton.Visible = false end)
+
+-- ロックボタンのクリック処理
+LockButton.MouseButton1Click:Connect(function()
+    isLaggerLocked = not isLaggerLocked
+    if isLaggerLocked then LockButton.Text = "🔒"; LockButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+    else LockButton.Text = "🔓"; LockButton.BackgroundColor3 = Color3.fromRGB(243, 156, 18) end
+end)
+
+-- ★モバイルトグルボタンの処理 (バグ修正)
+MobileToggle.MouseButton1Click:Connect(function()
+    isLaggerVisible = not isLaggerVisible
+    LaggerButton.Visible = isLaggerVisible
+end)
+
+-- 他のボタン処理
+ToggleButton.MouseButton1Click:Connect(function() isModeOn = not isModeOn; ToggleButton.Text = isModeOn and "ON" or "OFF"; ToggleButton.BackgroundColor3 = isModeOn and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60); updateTargetFps() end)
+UserInputService.InputBegan:Connect(function(input, gp) if gp or sliderDragging then return end; if input.KeyCode == Enum.KeyCode.K then isKDown = true; updateTargetFps() end end)
+UserInputService.InputEnded:Connect(function(input) if input.KeyCode == Enum.KeyCode.K then isKDown = false; updateTargetFps() end end)
+
+-- スライダーのドラッグ開始
+Dragger.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then sliderDragging = true end end)
+
+-- 「Lagger」ボタンの処理 (ロック機能反映)
+LaggerButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isLaggerBtnDown = true; updateTargetFps()
+        if not isLaggerLocked then laggerButtonDragging = true end
+    end
+end)
+LaggerButton.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isLaggerBtnDown = false; laggerButtonDragging = false; updateTargetFps()
+    end
+end)
+
+-- 全てのドラッグと入力終了処理
+UserInputService.InputChanged:Connect(function(input)
+    if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        if sliderDragging then
+            local s, w, m = Slider.AbsolutePosition.X, Slider.AbsoluteSize.X, input.Position.X
+            local p = math.clamp((m - s) / w, 0, 1)
+            Dragger.Position = UDim2.new(p, -Dragger.AbsoluteSize.X / 2, 0.5, -10)
+            sliderFps = 10 + (310 * p); updateTargetFps()
+        elseif laggerButtonDragging then
+            LaggerButton.Position = UDim2.new(0, input.Position.X - LaggerButton.AbsoluteSize.X / 2, 0, input.Position.Y - LaggerButton.AbsoluteSize.Y / 2)
+        end
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if sliderDragging then
+            sliderDragging = false; local p = Dragger.Position.X.Scale; local rawFps = 10 + (310 * p); local points = {10, 15, 20, 23, 25, 30}; local steppedFps
+            if rawFps <= 30 then local c = points[1]; for _, pt in ipairs(points) do if math.abs(rawFps - pt) < math.abs(rawFps - c) then c = pt end end; steppedFps = c else steppedFps = math.floor(rawFps / 5) * 5 end
+            sliderFps = steppedFps; local nP = (sliderFps - 10) / 310; Dragger.Position = UDim2.new(nP, -Dragger.AbsoluteSize.X / 2, 0.5, -10); updateTargetFps()
+        end
+        if laggerButtonDragging then laggerButtonDragging = false end
+    end
+end)
+
+-- 初期化
+local function initialize() sliderFps = 60; local p = (sliderFps - 10) / 310; Dragger.Position = UDim2.new(p, -Dragger.AbsoluteSize.X / 2, 0.5, -10); updateTargetFps() end
+initialize()
