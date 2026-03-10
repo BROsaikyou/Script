@@ -1,0 +1,100 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+
+-- 設定・状態管理
+local State = {
+    Target = nil,
+    Enabled = true -- 初期状態で有効
+}
+
+-- 1. 最も近い生存プレイヤーを探索する関数
+local function getNearestAlivePlayer()
+    local nearest = nil
+    local minDistance = math.huge
+    local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    
+    if not myRoot then return nil end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local targetRoot = player.Character:FindFirstChild("HumanoidRootPart")
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            
+            -- 生存確認（Health > 0）
+            if targetRoot and humanoid and humanoid.Health > 0 then
+                local distance = (myRoot.Position - targetRoot.Position).Magnitude
+                if distance < minDistance then
+                    minDistance = distance
+                    nearest = targetRoot
+                end
+            end
+        end
+    end
+    return nearest
+end
+
+-- 2. メタテーブルの取得とフック設定
+local mt = getrawmetatable(game)
+local oldNamecall = mt.__namecall
+local oldIndex = mt.__index
+setreadonly(mt, false)
+
+-- [Namecall Hook] remote:FireServer(...) 形式を捕捉
+mt.__namecall = newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    local args = {...}
+
+    if method == "FireServer" and State.Enabled and State.Target then
+        -- 引数内のVector3（座標）をターゲットの座標に書き換え
+        for i, v in ipairs(args) do
+            if typeof(v) == "Vector3" then
+                args[i] = State.Target.Position
+            end
+        end
+        print("[Intercepted] FireServer on: " .. self.Name .. " -> Redirected to Target")
+        return oldNamecall(self, unpack(args))
+    end
+    return oldNamecall(self, ...)
+end)
+
+-- [Index Hook] remote.FireServer(remote, ...) 形式を捕捉
+mt.__index = newcclosure(function(self, key)
+    if key == "FireServer" then
+        return newcclosure(function(remote, ...)
+            local args = {...}
+            if State.Enabled and State.Target then
+                for i, v in ipairs(args) do
+                    if typeof(v) == "Vector3" then
+                        args[i] = State.Target.Position
+                    end
+                end
+            end
+            print("[Intercepted Index] FireServer on: " .. remote.Name .. " -> Redirected to Target")
+            return oldNamecall(remote, unpack(args))
+        end)
+    end
+    return oldIndex(self, key)
+end)
+
+setreadonly(mt, true)
+
+-- 3. メインループ（常時ターゲット探索）
+RunService.Heartbeat:Connect(function()
+    State.Target = getNearestAlivePlayer()
+end)
+
+-- 4. 簡易ON/OFF切り替えGUI（任意で削除可能）
+local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+local btn = Instance.new("TextButton", gui)
+btn.Size = UDim2.new(0, 180, 0, 40)
+btn.Position = UDim2.new(0.5, -90, 0.05, 0)
+btn.Text = "AIMBOT: ON"
+btn.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+btn.TextColor3 = Color3.new(1, 1, 1)
+
+btn.MouseButton1Click:Connect(function()
+    State.Enabled = not State.Enabled
+    btn.Text = State.Enabled and "AIMBOT: ON" or "AIMBOT: OFF"
+    btn.BackgroundColor3 = State.Enabled and Color3.fromRGB(0, 180, 0) or Color3.fromRGB(180, 0, 0)
+end)
