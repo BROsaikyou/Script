@@ -1,0 +1,63 @@
+local Players = game:GetService("Players")
+local TeleportService = game:GetService("TeleportService")
+local LocalPlayer = Players.LocalPlayer
+local function createRejoinGui()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "RejoinConfirmationGui"
+    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    local frame = Instance.new("Frame")
+    frame.Name = "ConfirmationFrame"
+    frame.Size = UDim2.new(0, 300, 0, 150)
+    frame.Position = UDim2.new(0.5, -150, 0.5, -75)
+    frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    frame.BorderSizePixel = 0
+    frame.Parent = screenGui
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Name = "QuestionLabel"
+    textLabel.Size = UDim2.new(1, 0, 0.6, 0)
+    textLabel.Position = UDim2.new(0, 0, 0, 0)
+    textLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextScaled = true
+    textLabel.TextWrap = true
+    textLabel.Font = Enum.Font.SourceSansBold
+    textLabel.Text = "現在のサーバーに再参加しますか？"
+    textLabel.Parent = frame
+    local yesButton = Instance.new("TextButton")
+    yesButton.Name = "YesButton"
+    yesButton.Size = UDim2.new(0.4, 0, 0.3, 0)
+    yesButton.Position = UDim2.new(0.05, 0, 0.65, 0)
+    yesButton.BackgroundColor3 = Color3.fromRGB(85, 170, 255)
+    yesButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    yesButton.TextScaled = true
+    yesButton.Font = Enum.Font.SourceSansBold
+    yesButton.Text = "はい"
+    yesButton.Parent = frame
+    local noButton = Instance.new("TextButton")
+    noButton.Name = "NoButton"
+    noButton.Size = UDim2.new(0.4, 0, 0.3, 0)
+    noButton.Position = UDim2.new(0.55, 0, 0.65, 0)
+    noButton.BackgroundColor3 = Color3.fromRGB(255, 85, 85)
+    noButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    noButton.TextScaled = true
+    noButton.Font = Enum.Font.SourceSansBold
+    noButton.Text = "いいえ"
+    noButton.Parent = frame
+    return screenGui, yesButton, noButton
+end
+local function rejoinCurrentServer()
+    local success, message = pcall(function()
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+    end)
+    if not success then
+        warn("現在のサーバーへの再参加に失敗しました: ", message)
+    end
+end
+local screenGui, yesButton, noButton = createRejoinGui()
+yesButton.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
+    rejoinCurrentServer()
+end)
+noButton.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
+end)
