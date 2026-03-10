@@ -1,0 +1,25 @@
+if _G.CombinedBrightnessLoop then
+    _G.CombinedBrightnessLoop:Disconnect()
+    print("Previous loop stopped.")
+end
+
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+
+-- 霧を除去 (Nofog)
+-- Atmosphere と Sky オブジェクトを削除して、より効果的に霧を除去します
+for _, v in pairs(Lighting:GetChildren()) do
+    if v:IsA("Atmosphere") or v:IsA("Sky") then
+        v.Parent = nil
+    end
+end
+print("Nofog initialized: Atmosphere and Sky removed.")
+
+-- 明るさを維持するループ処理 (LoopFB)
+_G.CombinedBrightnessLoop = RunService.RenderStepped:Connect(function()
+    Lighting.Brightness = 2         -- 明るさを最大に
+    Lighting.ClockTime = 14         -- 時間を昼間に固定
+    Lighting.FogEnd = 1000000       -- 霧の表示距離を非常に遠くに設定
+    Lighting.FogStart = 0           -- 霧の開始距離を0に設定
+    Lighting.GlobalShadows = false  -- 影を無効化
+end)
