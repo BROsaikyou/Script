@@ -1,0 +1,216 @@
+--==================================================
+-- Invisibility & Flight GUI (Fixed Y-BANG Version)
+--==================================================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local Player = Players.LocalPlayer
+local Character, Humanoid, HRP
+local FakeCharacter
+local BodyVelocity, BodyGyro
+local MoveConnection
+
+-- 設定
+local HIDE_Y = -199996.484375
+local IsInvisible = false
+local IsFlying = false
+local FlySpeed = 50
+local TransparencyValue = 0.5
+
+--==================================================
+-- キャラ取得
+--==================================================
+local function UpdateCharacter(char)
+    Character = char
+    Humanoid = char:WaitForChild("Humanoid")
+    HRP = char:WaitForChild("HumanoidRootPart")
+    Character.Archivable = true
+end
+
+UpdateCharacter(Player.Character or Player.CharacterAdded:Wait())
+Player.CharacterAdded:Connect(function(char)
+    IsInvisible = false
+    IsFlying = false
+    UpdateCharacter(char)
+end)
+
+--==================================================
+-- クローン生成
+--==================================================
+local function CreateClone()
+    if IsInvisible or not Character or not HRP then return end
+
+    FakeCharacter = Character:Clone()
+    FakeCharacter.Parent = workspace
+
+    for _, v in ipairs(FakeCharacter:GetDescendants()) do
+        if v:IsA("BasePart") then
+            v.CanCollide = false
+            v.Transparency = TransparencyValue
+        elseif v:IsA("BodyMover") then
+            v:Destroy()
+        end
+    end
+
+    FakeCharacter.HumanoidRootPart.CFrame = HRP.CFrame
+
+    -- フライ用
+    BodyVelocity = Instance.new("BodyVelocity")
+    BodyVelocity.MaxForce = Vector3.new(1e6, 1e6, 1e6)
+    BodyVelocity.Velocity = Vector3.zero
+    BodyVelocity.Parent = FakeCharacter.HumanoidRootPart
+
+    BodyGyro = Instance.new("BodyGyro")
+    BodyGyro.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
+    BodyGyro.CFrame = FakeCharacter.HumanoidRootPart.CFrame
+    BodyGyro.Parent = FakeCharacter.HumanoidRootPart
+
+    workspace.CurrentCamera.CameraSubject = FakeCharacter.Humanoid
+
+    -- 本体をBANG
+    local hideCF = CFrame.new(
+        HRP.Position.X,
+        HIDE_Y,
+        HRP.Position.Z
+    )
+
+    IsInvisible = true
+
+    task.spawn(function()
+        while IsInvisible and HRP do
+            HRP.CFrame = hideCF
+            HRP.AssemblyLinearVelocity = Vector3.zero
+            task.wait()
+        end
+    end)
+
+    -- 移動処理
+    MoveConnection = RunService.RenderStepped:Connect(function()
+        if not IsInvisible or not FakeCharacter then return end
+
+        local cam = workspace.CurrentCamera
+        local moveDir = Humanoid.MoveDirection
+        local velocity = Vector3.zero
+
+        if moveDir.Magnitude > 0 then
+            velocity =
+                cam.CFrame.LookVector * -moveDir.Z +
+                cam.CFrame.RightVector * moveDir.X
+        end
+
+        if IsFlying then
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                velocity += Vector3.new(0, 1, 0)
+            elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                velocity += Vector3.new(0, -1, 0)
+            end
+        end
+
+        BodyVelocity.Velocity = velocity * FlySpeed
+        BodyGyro.CFrame = cam.CFrame
+    end)
+end
+
+--==================================================
+-- クローン解除
+--==================================================
+local function RemoveClone()
+    IsInvisible = false
+    IsFlying = false
+
+    if MoveConnection then
+        MoveConnection:Disconnect()
+        MoveConnection = nil
+    end
+
+    if FakeCharacter and HRP then
+        HRP.CFrame = FakeCharacter.HumanoidRootPart.CFrame
+        FakeCharacter:Destroy()
+        FakeCharacter = nil
+    end
+
+    workspace.CurrentCamera.CameraSubject = Humanoid
+end
+
+--==================================================
+-- GUI
+--==================================================
+pcall(function()
+    Player.PlayerGui.FlyInvisibleGui:Destroy()
+end)
+
+local ScreenGui = Instance.new("ScreenGui", Player.PlayerGui)
+ScreenGui.Name = "FlyInvisibleGui"
+
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 200, 0, 220)
+Frame.Position = UDim2.new(0, 50, 0, 150)
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame.Active = true
+Frame.Draggable = true
+Instance.new("UICorner", Frame)
+
+local function Button(text, y)
+    local b = Instance.new("TextButton", Frame)
+    b.Size = UDim2.new(0, 180, 0, 40)
+    b.Position = UDim2.new(0, 10, 0, y)
+    b.Text = text
+    b.Font = Enum.Font.GothamBold
+    b.TextColor3 = Color3.new(1, 1, 1)
+    b.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    Instance.new("UICorner", b)
+    return b
+end
+
+local InvBtn = Button("Invisible: OFF", 10)
+local FlyBtn = Button("Fly: OFF", 60)
+
+local SpeedLabel = Instance.new("TextLabel", Frame)
+SpeedLabel.Size = UDim2.new(0, 180, 0, 30)
+SpeedLabel.Position = UDim2.new(0, 10, 0, 110)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.TextColor3 = Color3.new(1, 1, 1)
+SpeedLabel.Text = "Speed: " .. FlySpeed
+
+local SpeedDown = Button("-", 150)
+SpeedDown.Size = UDim2.new(0, 85, 0, 40)
+
+local SpeedUp = Button("+", 150)
+SpeedUp.Size = UDim2.new(0, 85, 0, 40)
+SpeedUp.Position = UDim2.new(0, 105, 0, 150)
+
+--==================================================
+-- ボタン動作
+--==================================================
+InvBtn.MouseButton1Click:Connect(function()
+    if not IsInvisible then
+        CreateClone()
+        InvBtn.Text = "Invisible: ON"
+        InvBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    else
+        RemoveClone()
+        InvBtn.Text = "Invisible: OFF"
+        InvBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        FlyBtn.Text = "Fly: OFF"
+        FlyBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    end
+end)
+
+FlyBtn.MouseButton1Click:Connect(function()
+    if not IsInvisible then return end
+    IsFlying = not IsFlying
+    FlyBtn.Text = IsFlying and "Fly: ON" or "Fly: OFF"
+    FlyBtn.BackgroundColor3 = IsFlying and Color3.fromRGB(255, 170, 0) or Color3.fromRGB(60, 60, 60)
+end)
+
+SpeedUp.MouseButton1Click:Connect(function()
+    FlySpeed = math.min(FlySpeed + 10, 300)
+    SpeedLabel.Text = "Speed: " .. FlySpeed
+end)
+
+SpeedDown.MouseButton1Click:Connect(function()
+    FlySpeed = math.max(FlySpeed - 10, 10)
+    SpeedLabel.Text = "Speed: " .. FlySpeed
+end)
