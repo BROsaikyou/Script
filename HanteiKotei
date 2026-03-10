@@ -1,0 +1,329 @@
+--================================
+-- Services / Player
+--================================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- 二重生成防止
+if PlayerGui:FindFirstChild("BountyScoreboardUI") then
+	PlayerGui.BountyScoreboardUI:Destroy()
+end
+
+--================================
+-- Main UI
+--================================
+local function createMainUI()
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "BountyScoreboardUI"
+	screenGui.ResetOnSpawn = false
+	screenGui.Parent = PlayerGui
+
+	local mainFrame = Instance.new("Frame")
+	mainFrame.Size = UDim2.new(0, 320, 0, 420)
+	mainFrame.Position = UDim2.new(1, -340, 0.3, 0)
+	mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	mainFrame.BackgroundTransparency = 0.3
+	mainFrame.BorderSizePixel = 0
+	mainFrame.Active = true
+	mainFrame.Draggable = true
+	mainFrame.Parent = screenGui
+
+	-- Header / Bounty
+	local bountyLabel = Instance.new("TextLabel")
+	bountyLabel.Size = UDim2.new(1, -100, 0, 30)
+	bountyLabel.Position = UDim2.new(0, 10, 0, 5)
+	bountyLabel.BackgroundTransparency = 1
+	bountyLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+	bountyLabel.TextScaled = true
+	bountyLabel.Font = Enum.Font.SourceSansBold
+	bountyLabel.TextXAlignment = Enum.TextXAlignment.Left
+	bountyLabel.Text = "Bounty: ?"
+	bountyLabel.ZIndex = 2
+	bountyLabel.Parent = mainFrame
+
+	local toggleButton = Instance.new("TextButton")
+	toggleButton.Size = UDim2.new(0, 30, 0, 30)
+	toggleButton.Position = UDim2.new(1, -35, 0, 5)
+	toggleButton.AnchorPoint = Vector2.new(1, 0)
+	toggleButton.Text = "▲"
+	toggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	toggleButton.TextColor3 = Color3.new(1, 1, 1)
+	toggleButton.ZIndex = 3
+	toggleButton.Parent = mainFrame
+
+	local deleteButton = Instance.new("TextButton")
+	deleteButton.Size = UDim2.new(0, 30, 0, 30)
+	deleteButton.Position = UDim2.new(1, -70, 0, 5)
+	deleteButton.AnchorPoint = Vector2.new(1, 0)
+	deleteButton.Text = "✖"
+	deleteButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+	deleteButton.TextColor3 = Color3.new(1, 1, 1)
+	deleteButton.TextScaled = true
+	deleteButton.ZIndex = 3
+	deleteButton.Parent = mainFrame
+
+	local header = Instance.new("TextLabel")
+	header.Size = UDim2.new(1, -20, 0, 30)
+	header.Position = UDim2.new(0, 10, 0, 40)
+	header.BackgroundTransparency = 1
+	header.Text = "名前 / ID / Lv / Bounty / 持ち物"
+	header.TextColor3 = Color3.new(1, 1, 1)
+	header.TextSize = 14
+	header.Font = Enum.Font.SourceSansBold
+	header.TextXAlignment = Enum.TextXAlignment.Left
+	header.Parent = mainFrame
+
+	local playerList = Instance.new("ScrollingFrame")
+	playerList.Size = UDim2.new(1, -20, 0, 180)
+	playerList.Position = UDim2.new(0, 10, 0, 70)
+	playerList.ScrollBarThickness = 6
+	playerList.BackgroundTransparency = 1
+	playerList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	playerList.Parent = mainFrame
+
+	local listLayout = Instance.new("UIListLayout")
+	listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	listLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+	listLayout.Parent = playerList
+
+	local itemLabel = Instance.new("TextLabel")
+	itemLabel.Size = UDim2.new(1, -20, 0, 50)
+	itemLabel.Position = UDim2.new(0, 10, 0, 260)
+	itemLabel.BackgroundTransparency = 1
+	itemLabel.TextColor3 = Color3.new(1, 1, 1)
+	itemLabel.TextScaled = true
+	itemLabel.TextWrapped = true
+	itemLabel.Text = "持ち物: "
+	itemLabel.Font = Enum.Font.SourceSansBold
+	itemLabel.Parent = mainFrame
+
+	local selectedLabel = Instance.new("TextLabel")
+	selectedLabel.Size = UDim2.new(1, -20, 0, 30)
+	selectedLabel.Position = UDim2.new(0, 10, 1, -90)
+	selectedLabel.BackgroundTransparency = 1
+	selectedLabel.TextColor3 = Color3.new(1, 1, 1)
+	selectedLabel.Text = "選択中: なし"
+	selectedLabel.TextScaled = true
+	selectedLabel.Parent = mainFrame
+
+	local refreshButton = Instance.new("TextButton")
+	refreshButton.Size = UDim2.new(0.5, -5, 0, 40)
+	refreshButton.Position = UDim2.new(0, 10, 1, -50)
+	refreshButton.Text = "更新"
+	refreshButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	refreshButton.TextColor3 = Color3.new(1, 1, 1)
+	refreshButton.Parent = mainFrame
+
+	local resetButton = Instance.new("TextButton")
+	resetButton.Size = UDim2.new(0.5, -5, 0, 40)
+	resetButton.Position = UDim2.new(0.5, 5, 1, -50)
+	resetButton.Text = "リセット"
+	resetButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	resetButton.TextColor3 = Color3.new(1, 1, 1)
+	resetButton.Parent = mainFrame
+
+	--================================
+	-- State
+	--================================
+	local targetPlayer = nil
+	local teleportEnabled = false
+	local teleportDistance = 10
+	local offsetY = 1
+	local uiOpen = true
+
+	--================================
+	-- Utils
+	--================================
+	local function formatMillion(value)
+		if value >= 1_000_000 then
+			return string.format("%.1fm", value / 1_000_000)
+		else
+			return tostring(value)
+		end
+	end
+
+	local function getTools(player)
+		local items = {}
+		local bp = player:FindFirstChild("Backpack")
+		if bp then
+			for _, tool in ipairs(bp:GetChildren()) do
+				if tool:IsA("Tool") then
+					table.insert(items, tool.Name)
+				end
+			end
+		end
+		return table.concat(items, ", ")
+	end
+
+	--================================
+	-- Player List
+	--================================
+	local function refreshPlayerList()
+		for _, child in ipairs(playerList:GetChildren()) do
+			if child:IsA("TextButton") then
+				child:Destroy()
+			end
+		end
+
+		local navy, pirate, others = {}, {}, {}
+
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p == LocalPlayer then continue end
+
+			local bounty, lv = 0, 0
+			if p:FindFirstChild("leaderstats") and p.leaderstats:FindFirstChild("Bounty/Honor") then
+				bounty = p.leaderstats["Bounty/Honor"].Value
+			end
+			if p:FindFirstChild("Data") and p.Data:FindFirstChild("Level") then
+				lv = p.Data.Level.Value
+			end
+
+			local info = {
+				player = p,
+				name = p.DisplayName,
+				id = p.Name,
+				level = lv,
+				bounty = bounty,
+				team = p.Team
+			}
+
+			local tName = p.Team and p.Team.Name or ""
+			if tName == "海軍" then
+				table.insert(navy, info)
+			elseif tName == "海賊" then
+				table.insert(pirate, info)
+			else
+				table.insert(others, info)
+			end
+		end
+
+		local function make(list)
+			table.sort(list, function(a, b) return a.bounty > b.bounty end)
+			for _, info in ipairs(list) do
+				local button = Instance.new("TextButton")
+				button.Size = UDim2.new(1, 0, 0, 30)
+				button.Text = string.format(
+					"%s / %s / %d / %s",
+					info.name, info.id, info.level, formatMillion(info.bounty)
+				)
+				button.TextColor3 = Color3.new(1, 1, 1)
+				button.BackgroundTransparency = 0.4
+				button.BackgroundColor3 =
+					(info.team and info.team.TeamColor.Color) or Color3.fromRGB(30, 30, 30)
+				button.Parent = playerList
+
+				button.MouseButton1Click:Connect(function()
+					targetPlayer = info.player
+					selectedLabel.Text = "選択中: " .. info.name
+					itemLabel.Text = "持ち物: " .. getTools(info.player)
+				end)
+			end
+		end
+
+		make(navy)
+		make(pirate)
+		make(others)
+
+		playerList.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y)
+	end
+
+	--================================
+	-- Updates
+	--================================
+	local function updateOwnBounty()
+		local ls = LocalPlayer:FindFirstChild("leaderstats")
+		if ls and ls:FindFirstChild("Bounty/Honor") then
+			bountyLabel.Text = "Bounty: " .. tostring(ls["Bounty/Honor"].Value)
+		else
+			bountyLabel.Text = "Bounty: ?"
+		end
+	end
+
+	local function teleportToSelf()
+		if teleportEnabled and targetPlayer then
+			local rootPart = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+			local playerRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			if rootPart and playerRoot then
+				local forward = playerRoot.CFrame.LookVector
+				local pos = playerRoot.Position + forward * teleportDistance + Vector3.new(0, offsetY, 0)
+				rootPart.CFrame = CFrame.new(pos)
+			end
+		end
+	end
+
+	local function updateUIVisibility()
+		local show = uiOpen
+		playerList.Visible = show
+		refreshButton.Visible = show
+		resetButton.Visible = show
+		selectedLabel.Visible = show
+		deleteButton.Visible = show
+		bountyLabel.Visible = show
+		itemLabel.Visible = show
+
+		toggleButton.Text = show and "▲" or "▼"
+		mainFrame.Size = show and UDim2.new(0, 320, 0, 420) or UDim2.new(0, 320, 0, 40)
+	end
+
+	--================================
+	-- Connections
+	--================================
+	RunService.Heartbeat:Connect(function()
+		teleportToSelf()
+		updateOwnBounty()
+	end)
+
+	toggleButton.MouseButton1Click:Connect(function()
+		uiOpen = not uiOpen
+		updateUIVisibility()
+	end)
+
+	deleteButton.MouseButton1Click:Connect(function()
+		screenGui:Destroy()
+	end)
+
+	refreshButton.MouseButton1Click:Connect(refreshPlayerList)
+
+	resetButton.MouseButton1Click:Connect(function()
+		targetPlayer = nil
+		selectedLabel.Text = "選択中: なし"
+		itemLabel.Text = "持ち物: "
+	end)
+
+	Players.PlayerAdded:Connect(refreshPlayerList)
+	Players.PlayerRemoving:Connect(refreshPlayerList)
+
+	local mouse = LocalPlayer:GetMouse()
+	mouse.Button2Down:Connect(function()
+		teleportEnabled = true
+	end)
+	mouse.Button2Up:Connect(function()
+		teleportEnabled = false
+	end)
+
+	UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if gameProcessed then return end
+		if input.KeyCode == Enum.KeyCode.U then
+			teleportEnabled = false
+		end
+	end)
+
+	-- 初期化 & 自動更新
+	refreshPlayerList()
+	updateUIVisibility()
+	updateOwnBounty()
+
+	task.spawn(function()
+		while screenGui.Parent do
+			refreshPlayerList()
+			task.wait(10)
+		end
+	end)
+end
+
+-- 起動
+createMainUI()
