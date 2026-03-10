@@ -1,0 +1,88 @@
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local TitleLabel = Instance.new("TextLabel")
+local ButtonContainer = Instance.new("Frame")
+local UIListLayout = Instance.new("UIListLayout")
+local UIPadding = Instance.new("UIPadding")
+local ToggleButton = Instance.new("TextButton")
+ScreenGui.Name = "CompactTeleportHub"
+ScreenGui.Parent = game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.BorderSizePixel = 0
+MainFrame.Position = UDim2.new(0.5, -90, 0.5, -115)
+MainFrame.Size = UDim2.new(0, 180, 0, 230)
+MainFrame.Visible = true
+MainFrame.Active = true
+MainFrame.Draggable = true
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
+TitleLabel.Name = "TitleLabel"
+TitleLabel.Parent = MainFrame
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Size = UDim2.new(1, 0, 0, 40)
+TitleLabel.Font = Enum.Font.SourceSansBold
+TitleLabel.Text = "TELEPORT"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 16
+ButtonContainer.Name = "ButtonContainer"
+ButtonContainer.Parent = MainFrame
+ButtonContainer.BackgroundTransparency = 1
+ButtonContainer.Position = UDim2.new(0, 0, 0, 40)
+ButtonContainer.Size = UDim2.new(1, 0, 1, -45)
+UIListLayout.Parent = ButtonContainer
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 8)
+UIPadding.Parent = ButtonContainer
+UIPadding.PaddingLeft = UDim.new(0, 10)
+UIPadding.PaddingRight = UDim.new(0, 10)
+UIPadding.PaddingTop = UDim.new(0, 5)
+local Locations = {
+    {Name = "海城", Pos = Vector3.new(-5020, 314, -3191)},
+    {Name = "ヒドラ", Pos = Vector3.new(5660, 1013, -336)},
+    {Name = "チキ", Pos = Vector3.new(-5097, 316, -3178)},
+    {Name = "マンション", Pos = Vector3.new(-12471, 374, -7554)}
+}
+local function Teleport(targetPos)
+    local player = game.Players.LocalPlayer
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        player.Character.HumanoidRootPart.CFrame = CFrame.new(targetPos)
+    end
+end
+for i, loc in ipairs(Locations) do
+    local Btn = Instance.new("TextButton")
+    Btn.Name = loc.Name .. "Btn"
+    Btn.Parent = ButtonContainer
+    Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    Btn.BorderSizePixel = 0
+    Btn.Size = UDim2.new(1, 0, 0, 38)
+    Btn.Font = Enum.Font.SourceSansSemibold
+    Btn.Text = loc.Name
+    Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Btn.TextSize = 15
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(0, 6)
+    BtnCorner.Parent = Btn
+    Btn.MouseButton1Click:Connect(function()
+        Btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        Teleport(loc.Pos)
+        task.wait(0.1)
+        Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    end)
+end
+ToggleButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+    if MainFrame.Visible then
+        ToggleButton.Text = "X"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+    else
+        ToggleButton.Text = "TP"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    end
+end)
+ToggleButton.Text = "X"
+ToggleButton.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+print("Compact Teleport GUI Loaded!")
