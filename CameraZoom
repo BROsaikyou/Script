@@ -1,0 +1,9 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local cam = workspace.CurrentCamera
+
+-- Robloxデフォルトの最大ズーム距離（Classic/Follows）を拡張
+player.CameraMaxZoomDistance = 99999999
+player.CameraMinZoomDistance = 0.5  -- 必要なら調整
+
+print("Zoom range expanded!")
