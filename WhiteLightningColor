@@ -1,0 +1,21 @@
+local player = game.Players.LocalPlayer
+local vfxFolder = player:WaitForChild("LightningFruitVFXColor")
+
+local default = vfxFolder:WaitForChild("Default")
+local shifted = vfxFolder:WaitForChild("Shifted")
+
+local defaultColor1 = Color3.fromRGB(255, 85, 0)
+local defaultColor2 = Color3.fromRGB(0, 0, 255)
+local defaultColor3 = Color3.fromRGB(255, 85, 0)
+
+local shiftedColor1 = Color3.fromRGB(255, 255, 255)
+local shiftedColor2 = Color3.fromRGB(255, 255, 255)
+local shiftedColor3 = Color3.fromRGB(255, 255, 255)
+
+default:SetAttribute("Default_Color1", defaultColor1)
+default:SetAttribute("Default_Color2", defaultColor2)
+default:SetAttribute("Default_Color3", defaultColor3)
+
+shifted:SetAttribute("Shifted_Color1", shiftedColor1)
+shifted:SetAttribute("Shifted_Color2", shiftedColor2)
+shifted:SetAttribute("Shifted_Color3", shiftedColor3)
