@@ -1,0 +1,12 @@
+local player = game.Players.LocalPlayer
+
+while true do
+    local vfxColor = player:FindFirstChild("KitsuneFruitVFXColor")
+    local target = vfxColor and vfxColor:FindFirstChild("Shifted")
+
+    if target then
+        target:SetAttribute("Shifted_Color1", Color3.fromRGB(255, 255, 255))
+    end
+
+    task.wait(0.1)
+end
