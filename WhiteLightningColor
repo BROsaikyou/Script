@@ -19,3 +19,5 @@ default:SetAttribute("Default_Color3", defaultColor3)
 shifted:SetAttribute("Shifted_Color1", shiftedColor1)
 shifted:SetAttribute("Shifted_Color2", shiftedColor2)
 shifted:SetAttribute("Shifted_Color3", shiftedColor3)
+
+shifted:SetAttribute("GrayscaleToColorStrength", 0)
