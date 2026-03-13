@@ -1,0 +1,21 @@
+local player = game.Players.LocalPlayer
+local vfxFolder = player:WaitForChild("PainFruitVFXColor")
+local shifted = vfxFolder:WaitForChild("Shifted")
+
+local defColor1 = Color3.fromRGB(255, 55, 58)
+local defColor2 = Color3.fromRGB(95, 14, 14)
+local defColor3 = Color3.fromRGB(255, 114, 112)
+
+local shiColor1 = Color3.fromRGB(213, 17, 255)
+local shiColor2 = Color3.fromRGB(0, 255, 140)
+local shiColor3 = Color3.fromRGB(0, 137, 227)
+
+shifted:SetAttribute("GrayscaleToColorStrength", 0)
+
+shifted:SetAttribute("Default_Color1", defColor1)
+shifted:SetAttribute("Default_Color2", defColor2)
+shifted:SetAttribute("Default_Color3", defColor3)
+
+shifted:SetAttribute("Shifted_Color1", shiColor1)
+shifted:SetAttribute("Shifted_Color2", shiColor2)
+shifted:SetAttribute("Shifted_Color3", shiColor3)
